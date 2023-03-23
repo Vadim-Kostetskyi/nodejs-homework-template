@@ -5,6 +5,7 @@ const {
   removeContact,
   addContact,
   updateContact,
+  updateStatusContact,
 } = require("../../models/contacts");
 
 const router = express.Router();
@@ -33,11 +34,11 @@ router.get("/:contactId", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, favorite } = req.body;
     if (!name || !email || !phone) {
       res.status(400).json({ message: "missing required name field" });
     } else {
-      const newContact = { name, email, phone };
+      const newContact = { name, email, phone, favorite };
       addContact(newContact);
       res.status(201).json(newContact);
     }
@@ -78,6 +79,25 @@ router.put("/:contactId", async (req, res, next) => {
     }
   } catch (err) {
     console.log(err);
+  }
+});
+
+router.patch("/:contactId/favorite", async (req, res) => {
+  try {
+    const updatedContact = await updateStatusContact(
+      req.params.contactId,
+      req.body
+    );
+    console.log(updatedContact);
+    res.status(200).json(updatedContact);
+  } catch (error) {
+    if (error.message === "missing field favorite") {
+      res.status(400).json({ message: "missing field favorite" });
+    } else if (error.message === "Not found") {
+      res.status(404).json({ message: "Not found" });
+    } else {
+      res.status(500).json({ message: "Internal Server Error" });
+    }
   }
 });
 
