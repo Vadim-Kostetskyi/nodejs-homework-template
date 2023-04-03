@@ -6,99 +6,41 @@ const {
   addContact,
   updateContact,
   updateStatusContact,
-} = require("../../models/contacts");
+} = require("../../controllers/contactsBase");
+const {
+  registerUser,
+  loginUser,
+  logoutUser,
+  currentUser,
+  userSubscription,
+} = require("../../controllers/user");
+const checkTokenMiddleware = require("../../middlewares/avtorization");
+const validationMiddleWare = require("../../middlewares/validation");
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
-  try {
-    const contacts = await listContacts();
-    res.status(200).json(contacts);
-  } catch (err) {
-    console.log(err);
-  }
-});
+router.get("/", listContacts);
 
-router.get("/:contactId", async (req, res) => {
-  try {
-    const contact = await getContactById(req.params.contactId);
-    if (!contact) {
-      res.status(404).json({ message: "Not found" });
-    } else {
-      res.json(contact);
-    }
-  } catch (err) {
-    console.log(err);
-  }
-});
+router.get("/:contactId", getContactById);
 
-router.post("/", async (req, res) => {
-  try {
-    const { name, email, phone, favorite } = req.body;
-    if (!name || !email || !phone) {
-      res.status(400).json({ message: "missing required name field" });
-    } else {
-      const newContact = { name, email, phone, favorite };
-      addContact(newContact);
-      res.status(201).json(newContact);
-    }
-  } catch (err) {
-    console.log(err);
-  }
-});
+router.post("/", addContact);
 
-router.delete("/:contactId", async (req, res, next) => {
-  try {
-    const contact = await removeContact(req.params.contactId);
-    if (!contact) {
-      res.status(404).json({ message: "Not found" });
-    } else {
-      res.json({ message: "contact deleted" });
-    }
-  } catch (err) {
-    console.log(err);
-  }
-});
+router.post("/users/register", registerUser);
 
-router.put("/:contactId", async (req, res, next) => {
-  try {
-    const { name, email, phone } = req.body;
-    if (!name || !email || !phone) {
-      res.status(400).json({ message: "missing fields" });
-    } else {
-      const updatedContact = await updateContact(req.params.contactId, {
-        name,
-        email,
-        phone,
-      });
-      if (!updatedContact) {
-        res.status(404).json({ message: "Not found" });
-      } else {
-        res.json(updatedContact);
-      }
-    }
-  } catch (err) {
-    console.log(err);
-  }
-});
+router.delete("/:contactId", removeContact);
 
-router.patch("/:contactId/favorite", async (req, res) => {
-  try {
-    const updatedContact = await updateStatusContact(
-      req.params.contactId,
-      req.body
-    );
-    console.log(updatedContact);
-    res.status(200).json(updatedContact);
-  } catch (error) {
-    if (error.message === "missing field favorite") {
-      res.status(400).json({ message: "missing field favorite" });
-    } else if (error.message === "Not found") {
-      res.status(404).json({ message: "Not found" });
-    } else {
-      res.status(500).json({ message: "Internal Server Error" });
-    }
-  }
-});
+router.put("/:contactId", updateContact);
+
+router.patch("/:contactId/favorite", updateStatusContact);
+
+router.post("/users/login", validationMiddleWare, loginUser);
+
+router.post("/users/logout", checkTokenMiddleware, logoutUser);
+
+router.get("/users/current", checkTokenMiddleware, currentUser);
+
+router.patch("/users", checkTokenMiddleware, userSubscription);
+
+module.exports = router;
 
 module.exports = router;
