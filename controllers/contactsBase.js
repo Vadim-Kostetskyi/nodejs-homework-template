@@ -1,5 +1,5 @@
 const { Error } = require("mongoose");
-const { Contacts } = require("../db/models");
+const { Contacts, User } = require("../db/models");
 
 const listContacts = async (req, res) => {
   const { page = 1, limit = 20, favorite } = req.query;
