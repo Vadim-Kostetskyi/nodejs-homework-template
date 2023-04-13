@@ -19,6 +19,8 @@ const {
   currentUser,
   userSubscription,
   updateUserAvatar,
+  verifyUser,
+  reVariation,
 } = require("../../controllers/user");
 
 const checkTokenMiddleware = require("../../middlewares/avtorization");
@@ -52,5 +54,8 @@ router.patch(
   upload.single("avatar"),
   updateUserAvatar
 );
+
+router.get("/users/verify/:verificationToken", verifyUser);
+router.post("/users/verify", reVariation);
 
 module.exports = router;

@@ -4,11 +4,41 @@ const { User } = require("../db/models");
 const path = require("path");
 const fs = require("fs/promises");
 const jimp = require("jimp");
+const gravatar = require("gravatar");
+const nodemailer = require("nodemailer");
+const { v4: uuidv4 } = require("uuid");
+
+require("dotenv").config();
+
+function sendVerificationEmail(userEmail, verificationToken) {
+  const config = {
+    host: "smtp.meta.ua",
+    port: 465,
+    secure: true,
+    auth: {
+      user: "sacraf@meta.ua",
+      pass: process.env.PASSWORD,
+    },
+  };
+
+  const transporter = nodemailer.createTransport(config);
+  const emailOptions = {
+    from: "sacraf@meta.ua",
+    to: userEmail,
+    subject: "Nodemailer test",
+    text: `Для підтвердження вашої реєстрації пройдіть за посиланням: http://localhost:3000/api/contacts/users/verify/${verificationToken}`,
+  };
+
+  transporter
+    .sendMail(emailOptions)
+    .then((info) => console.log(info))
+    .catch((err) => console.log(err));
+}
 
 const registerUser = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const existingUser = await User.findOne(email);
+    const existingUser = await User.findOne({ email: email });
     if (existingUser) {
       return res.status(409).json({ message: "Email in use" });
     }
@@ -16,13 +46,67 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    await newUser.save();
-
     const avatarURL = gravatar.url(email, { s: "250" }, true);
-    const newUser = new User({ email, password: hashedPassword, avatarURL });
-    await newUser.save();
+    const verificationToken = uuidv4();
 
-    return res.status(201).json({ user: newUser });
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      verificationToken: verificationToken,
+      avatarURL,
+    });
+
+    await newUser.save();
+    sendVerificationEmail(email, verificationToken);
+
+    return res.status(201).send({ user: newUser });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+const verifyUser = async (req, res) => {
+  try {
+    const verificationToken = req.params.verificationToken;
+
+    const user = await User.findOne({ verificationToken });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.verify = true;
+    user.verificationToken = null;
+    await user.save();
+
+    return res.status(200).json({ message: "Verification successful" });
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+const reVariation = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res
+        .status(400)
+        .json({ message: "Missing required field 'email'" });
+    }
+
+    const user = await User.findOne({ email: email });
+
+    if (user && !user.verify) {
+      sendVerificationEmail(user.email, user.verificationToken);
+      return res.status(200).json({ message: "Verification email sent" });
+    } else if (user && user.isVerified) {
+      return res
+        .status(400)
+        .json({ message: "Verification has already been passed" });
+    } else {
+      return res.status(404).json({ message: "User not found" });
+    }
   } catch (err) {
     console.log(err);
   }
@@ -135,4 +219,6 @@ module.exports = {
   currentUser,
   userSubscription,
   updateUserAvatar,
+  verifyUser,
+  reVariation,
 };
