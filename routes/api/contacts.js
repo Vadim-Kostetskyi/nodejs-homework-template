@@ -1,4 +1,9 @@
 const express = require("express");
+const multer = require("multer");
+
+const router = express.Router();
+const upload = multer({ dest: "../../tmp" });
+
 const {
   listContacts,
   getContactById,
@@ -13,11 +18,13 @@ const {
   logoutUser,
   currentUser,
   userSubscription,
+  updateUserAvatar,
+  verifyUser,
+  reVariation,
 } = require("../../controllers/user");
+
 const checkTokenMiddleware = require("../../middlewares/avtorization");
 const validationMiddleWare = require("../../middlewares/validation");
-
-const router = express.Router();
 
 router.get("/", listContacts);
 
@@ -41,6 +48,14 @@ router.get("/users/current", checkTokenMiddleware, currentUser);
 
 router.patch("/users", checkTokenMiddleware, userSubscription);
 
-module.exports = router;
+router.patch(
+  "/users/avatars",
+  checkTokenMiddleware,
+  upload.single("avatar"),
+  updateUserAvatar
+);
+
+router.get("/users/verify/:verificationToken", verifyUser);
+router.post("/users/verify", reVariation);
 
 module.exports = router;

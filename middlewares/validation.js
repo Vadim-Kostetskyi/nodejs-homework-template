@@ -5,7 +5,6 @@ const validationMiddleWare = async (req, res, next) => {
 
   try {
     await model.validate();
-    console.log("User is valid");
     next();
   } catch (err) {
     res
